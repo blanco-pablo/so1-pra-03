@@ -6,13 +6,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 )
 import "log"
 
 func getNumericFileInfos() []os.FileInfo {
-
-	//fmt.Print("Estoy a punto de imprimir algo");
-
 	files, err := ioutil.ReadDir("/proc")
 
 	if err != nil {
@@ -29,22 +27,8 @@ func getNumericFileInfos() []os.FileInfo {
 	}
 
 	return numberProcs;
-
 }
-type LinuxProcessInfo struct {
 
-	pid string
-	user string // lo tengo en numeros
-	name string
-
-	// falta ram
-
-	state string
-	//isZombie bool
-	//isSleeping bool
-	//isRunning bool
-	//isStoped bool
-}
 
 func getLinuxProcesses() []map[string]interface{} {
 	var linuxProcesses []map[string]interface{}
@@ -119,4 +103,132 @@ func extractLinuxProcessInfo(pid string, content string) map[string]interface{} 
 
 
 	return processInfo;
+}
+
+
+func killProcess(pid int) error {
+	process, err := os.FindProcess(pid);
+	if err != nil {
+		return err
+	}
+
+	err = process.Signal(syscall.Signal(0)) // if nil then is ok to kill
+
+	if err != nil {
+		return err
+	}
+
+	err = process.Kill()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getCPUUsage() (int, int) {
+	statFileContent := getStatFileContent()
+	return extractCpuUsageFromStatFileContent(statFileContent)
+}
+
+func getRAMUsage() (int, int) {
+	fileContent := getMemInfoFileContent()
+	return extractRamUsageFromMemInfoContent(fileContent)
+}
+
+
+
+/**
+  1. read the first line of   /proc/stat
+  2. discard the first word of that first line   (it's always cpu)
+  3. sum all of the times found on that first line to get the total time
+  4. divide the fourth column ("idle") by the total time, to get the fraction of time spent being idle
+  5. subtract the previous fraction from 1.0 to get the time spent being   not   idle
+  6. multiple by   100   to get a percentage
+ */
+func extractCpuUsageFromStatFileContent(content string) (int, int) {
+	numbers := extractNumbersFromLine(content, 0)
+	var total = 0
+	for _, n := range numbers {
+		total += n
+	}
+	//return 100 - float64(numbers[3]) * 100 / float64(total)
+	return numbers[3], total
+}
+
+
+func extractRamUsageFromMemInfoContent(content string) (int, int) {
+	total := extractNumbersFromLine(content, 0)[0]
+	available := extractNumbersFromLine(content, 2)[0]
+	used := total - available
+	return used, total
+}
+
+func extractNumbersFromLine(s string, line int) []int {
+
+	var currentLine = 0
+	var numbers []int
+	var value = ""
+	var firstLine = "";
+
+	for _, c := range s {
+
+		if (currentLine == line) {
+			firstLine += string(c);
+
+			if isNumber(int(c)) {
+				value += string(c)
+			} else {
+				number, err := strconv.Atoi(value)
+				if err == nil {
+					numbers = append(numbers, number)
+				}
+				value = ""
+			}
+		}
+
+		if c == '\n' {
+			if currentLine >= line {
+				break
+			}
+			currentLine += 1
+		}
+	}
+
+	fmt.Printf("Linea: %s", firstLine);
+	fmt.Printf("Extraido: %v \n", numbers)
+
+	return numbers
+}
+
+func isNumber(c int) bool {
+	return c >= '0' && c <= '9'
+}
+
+func getStatFileContent() string {
+	file, err := os.Open("/proc/stat")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	fileContentBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fileContent := fmt.Sprintf("%s", fileContentBytes)
+	return fileContent
+}
+func getMemInfoFileContent() string {
+	file, err := os.Open("/proc/meminfo")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	fileContentBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fileContent := fmt.Sprintf("%s", fileContentBytes)
+	return fileContent
 }

@@ -16,6 +16,8 @@ export default class ProcessesSection extends React.Component {
 
     getProcesses = async () => {
 
+        console.log('soy llamado');
+
         this.setState({ tableLoading: true });
 
         try {
@@ -33,8 +35,30 @@ export default class ProcessesSection extends React.Component {
         }
     };
 
-    killProcess = (record) => {
-        console.log('a punto de matar al proceso:', record.name, 'con pid:', record.pid);
+    killProcess = async (record) => {
+
+        // const hide = message.loading('Matando...', 0);
+
+        try {
+            console.log('a punto de matar al proceso:', record.name, 'con pid:', record.pid);
+
+            const response = await axios.get(`/kill/${record.pid}`);
+            console.log(response);
+
+            // hide();
+            message.success(`Proceso '${record.name}' con pid ${record.pid} matado`);
+            this.getProcesses();
+        }
+        catch (e) {
+            console.log('ocurrio un error');
+            console.log(e);
+            console.log(e.response.data);
+            console.log(e.response.status);
+            console.log(e.response.headers);
+
+            // hide();
+            message.error('No se pudo matar el proceso');
+        }
     };
 
     render() {
@@ -55,6 +79,12 @@ export default class ProcessesSection extends React.Component {
                 title: 'Estado',
                 dataIndex: 'state',
                 key: 'state'
+            },
+
+            {
+                title: 'Usuario',
+                dataIndex: 'uid',
+                key: 'uid'
             },
 
             {

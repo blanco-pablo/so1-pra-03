@@ -5,6 +5,8 @@ import 'antd/dist/antd.css';
 import LoginSection from "./components/LoginSection";
 import ProcessesSection from "./components/ProcessesSection";
 import {Carousel} from "antd";
+import CPUSection from "./components/CPUSection";
+import RAMSection from "./components/RAMSection";
 
 
 export default class App extends React.Component {
@@ -21,22 +23,26 @@ export default class App extends React.Component {
     render() {
         return (
             <div className="App">
-                {/*{ !this.state.logged && <LoginSection onLoginSuccess={this.onLoginSuccess} /> }*/}
-                {/*{ !this.state.logged && <ProcessesSection /> }*/}
+                { !this.state.logged && <LoginSection onLoginSuccess={this.onLoginSuccess} /> }
 
-                <Carousel dotPosition="top"  >
-                    <div>
+                { this.state.logged && (<Carousel dotPosition="top"  >
+                    <div key="1">
                         <h3>Procesos</h3>
                         <ProcessesSection />
                     </div>
-                    <div>
-                        <h3>2</h3>
+                    <div key="2">
+                        <h3>CPU</h3>
+                        <CPUSection />
                     </div>
-                    <div>
-                        <h3>3</h3>
+                    <div key="3">
+                        <h3>Ram</h3>
+                        <RAMSection />
                     </div>
 
-                </Carousel>
+                </Carousel>) }
+
+
+
 
             </div>
         );
